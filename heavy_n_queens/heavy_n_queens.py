@@ -6,19 +6,14 @@ from typing import Any
 
 
 
-def num_attacking_queens(position):
-    #find the lightest queen
-
-    #Compute the cost of each move for that queen
-    pass
-
-
 def create_queens(data, board):
     queens = []
     for i, q in enumerate(data):
         queen = Queen(id=i, position=q[0], weight=q[1])
-        board = queen.determine_initial_attacks(board)
+        queen.determine_initial_attacks(board)
         queens.append(queen)
+    for q in queens:
+        board.add_attacks(q)
     return queens, board
 
 
@@ -30,9 +25,8 @@ class Queen:
         self.id = id
 
     def is_attacking(self, board):
-        for pos in self.attacking_positions:
-            if board.check_position(pos):
-                return True
+        if board.check_position(self.position):
+            return True
         return False
 
     def move(self, spaces):
@@ -68,25 +62,22 @@ class Queen:
 
             # Forward Horizontal Diaganol up
             for_diaganol_up = self.position[1] + (i - self.position[0])
-            if for_diaganol_up <= 5 and i > self.position[0]:
+            if for_diaganol_up <= board.size and i > self.position[0]:
                 self.attacking_positions.add((i, for_diaganol_up))
             # Forward Horizontal Diaganol down
             for_diaganol_down = self.position[1] - (i - self.position[0])
-            if for_diaganol_down > 0 and i > self.position[0] and i < 5:
+            if for_diaganol_down > 0 and i > self.position[0] and i < board.size:
                 self.attacking_positions.add((i, for_diaganol_down))
 
             # Reverse Horizontal Diaganol up
             rev_diaganol_up = self.position[1] + (self.position[0] - i)
-            if rev_diaganol_up <= 5 and i < self.position[0]:
+            if rev_diaganol_up <= board.size and i < self.position[0]:
                 self.attacking_positions.add((i, rev_diaganol_up))
             # Reverse Horizontal Diaganol down
             rev_diaganol_down = self.position[1] - (self.position[0] - i)
-            if rev_diaganol_down > 0 and i < self.position[0] and i < 5:
+            if rev_diaganol_down > 0 and i < self.position[0] and i < board.size:
                 self.attacking_positions.add((i, rev_diaganol_down))
 
-        board.add_attacks(self)
-
-        return board
 
 class Board:
     def __init__(self, n):
@@ -128,45 +119,39 @@ class Board:
 @dataclass(order=True)
 class PrioritizedNode:
     cost: int
-    id: int
+    heuristic: int=field(compare=False)
+    id: int=field(compare=False)
+    sorted_queens: Any=field(compare=False)
     queens: Any=field(compare=False)
-    history: Any=field(compare=False)
     board: Any=field(compare=False)
-    moves: Any=field(compare=False)
 
     def __hash__(self):
-        return hash(self.id)
+        return hash(self.sorted_queens)
+
+    def __eq__(self, other):
+        return self.sorted_queens == other.sorted_queens
+
 
 def move_cost(num_tiles, weight):
     return num_tiles * weight**2
 
 
 def heuristic_one(queens, board):
-    return min(queen.weight for queen in queens if queen.is_attacking(board))
+    try:
+        return min(queen.weight for queen in queens if queen.is_attacking(board))
+    except ValueError:
+        return 0
+
 
 def expand_nodes(node, priority):
-    history = node.history
     board = node.board
     queens = node.queens
     start_cost = node.cost
-    node_moves = node.moves
 
-    all_attacks = []
-    print(node.queens)
     for q in queens:
-
-        attackers = board.get_queens_attacking(q)
-        if not attackers:
-            continue
-        all_attacks.append(attackers)
 
         moves = q.find_all_possible_moves(board)
         for m in moves:
-            if m in node_moves:
-                continue
-            new_node_moves = node_moves.copy()
-            new_node_moves.add(m)
-            history_copy = dict(history)
 
             # Queen stuff
             queens_copy = queens.copy()
@@ -184,47 +169,41 @@ def expand_nodes(node, priority):
             cost = move_cost(abs(q.position[1] - m[1]), q.weight)
             total_cost = cost + start_cost
 
-            new_node = PrioritizedNode(cost=total_cost * h1, queens=queens_copy, history=history_copy, board=new_board, id=node.id + 1, moves=new_node_moves)
-            history_copy[new_node] = node
+            new_node = PrioritizedNode(cost=total_cost,
+                                       queens=queens_copy,
+                                       sorted_queens=tuple(sorted([q.position for q in queens_copy], key=lambda q: q[0])),
+                                       board=new_board,
+                                       id=node.id + 1,
+                                       heuristic=h1)
 
             priority.put(new_node)
-    # Don't terminate
-    if all_attacks:
-        return False
 
-    # Terminate
-    elif not all_attacks:
-        return True
 
 def a_star(board, queens):
-
+    sorted_queens = tuple(sorted([q.position for q in queens], key=lambda q: q[0]))
     priority = queue.PriorityQueue()
-    history = dict(start=None)
     node_id = 0
-    start_node = PrioritizedNode(cost=0, queens=queens, board=board, history=history, id=node_id, moves=set())
+    h1 = heuristic_one(queens, board)
+    start_node = PrioritizedNode(cost=0, queens=queens, board=board, sorted_queens=sorted_queens, id=node_id, heuristic=h1)
     priority.put(start_node)
 
+    current_node = None
+    history = {start_node: 0}
+
+    depth = 0
     while not priority.empty():
-        node = priority.get()
-        terminated = expand_nodes(node, priority)
-        if terminated:
-            break
-    print("Out")
+        next_node = priority.get()
+        if next_node.id > depth:
+            depth += 1
+            print("depth: ", depth)
 
+        if next_node.heuristic == 0:
+            return next_node
 
-
-
-
-
-
-    #     attackers = board.get_queens_attacking(q)
-    #     for a in attackers:
-    #         lq = a if a.position[0] < q.position[0] else q
-    #         gq = a if a.position[0] > q.position[0] else q
-    #         attacking_pairs.add((lq, gq))
-    # print(attacking_pairs)
-
-
+        if next_node in history and history[next_node] < next_node.cost:
+            continue
+        history[next_node] = next_node.cost
+        expand_nodes(next_node, priority)
 
 
 if __name__ == '__main__':
@@ -237,16 +216,14 @@ if __name__ == '__main__':
     #
     # args = parser.parse_args()
     # print(args.accumulate(args.integers))
-    SIZE = 5
-    queens = [((1, 1), 3), ((2, 3), 2), ((3, 2), 1), ((4, 4), 8), ((5, 3), 9)]
-    board = Board(n=SIZE)
-    import sys
-    print(sys.getsizeof(board))
+
+    queens = [((1, 1), 9), ((2, 3), 9), ((3, 2), 1), ((4, 4), 1)]#, ((5, 3), 1)]
+    board = Board(n=len(queens))
     queens, board = create_queens(queens, board)
-    # h1 = heuristic_one(queens)
-    # print("heuristsic weight: ", h1)
+
     for q in queens:
         print(q.weight)
         print(q.attacking_positions)
         print()
-    a_star(board=board, queens=queens)
+    node = a_star(board=board, queens=queens)
+    print("Finished!", node)
