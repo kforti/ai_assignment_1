@@ -4,6 +4,31 @@ import copy
 from dataclasses import dataclass, field
 from typing import Any
 
+# determine position and weight of each queen
+def set_queens(input_file):
+    queens = []
+    with open(input_file) as board_data:
+        csv_reader = csv.reader(board_data, delimiter=',')
+        row_count = 1
+        # iterate through each row of the board
+        for row in csv_reader:
+            # for each row, locate the queens in that row
+            find_queens_in_row(row, row_count, queens)
+            row_count += 1
+    return queens
+
+
+# find every queen in a given row
+def find_queens_in_row(row, row_count, queens):
+    # iterate the columns of a given row
+    for col in range(len(row)):
+        weight = row[col]   # get the weight
+        if weight.isdigit() == True:
+            # create a new queen tuple if a queen exists in this position
+            new_queen = ((row_count, col+1), int(weight))
+            # add the queen to the "queens" list
+            queens.append(new_queen)
+
 
 
 def create_queens(data, board):
@@ -205,19 +230,21 @@ def a_star(board, queens):
         history[next_node] = next_node.cost
         expand_nodes(next_node, priority)
 
+def get_input():
+    my_parser = argparse.ArgumentParser(description='Please add some command line inputs... if you do not, I won"t know how to behave')
+    my_parser.add_argument('input_file', help='Name of the file containing the n-queens board')
+    my_parser.add_argument('strategy', help='Specifies the search technique')
+    my_parser.add_argument('heuristic', help='Specifies the heuristic (H1 or H2)')
+    args = my_parser.parse_args()
+    return args.input_file, args.strategy, args.heuristic
+
+
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser(description='Process some integers.')
-    # parser.add_argument('integers', metavar='N', type=int, nargs='+',
-    #                     help='an integer for the accumulator')
-    # parser.add_argument('--sum', dest='accumulate', action='store_const',
-    #                     const=sum, default=max,
-    #                     help='sum the integers (default: find the max)')
-    #
-    # args = parser.parse_args()
-    # print(args.accumulate(args.integers))
-
-    queens = [((1, 1), 9), ((2, 3), 9), ((3, 2), 1), ((4, 4), 1)]#, ((5, 3), 1)]
+    # get command line input
+    input_file, strategy, heuristic = get_input()
+    # get the locations and weights of the queens
+    queens = set_queens(input_file)
     board = Board(n=len(queens))
     queens, board = create_queens(queens, board)
 
