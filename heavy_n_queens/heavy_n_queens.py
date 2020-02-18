@@ -178,6 +178,51 @@ def expand_nodes(node, priority):
 
             priority.put(new_node)
 
+def get_next_nodes(queens, board, sideway):
+
+    result_queens = queens.copy()
+    result_board = board.copy()
+    current_heuristic = heuristic_one(queens, board)
+    min_cost = current_heuristic
+    potential_sideways = []
+
+    for q in queens:
+
+        moves = q.find_all_possible_moves(board)
+        for m in moves:
+
+            # Queen stuff
+            queens_copy = queens.copy()
+            queens_copy.remove(q)
+            new_queen = Queen(q.id, m, q.weight)
+            new_queen.determine_initial_attacks(board)
+            queens_copy.append(new_queen)
+
+            # Board stuff
+            new_board = board.copy()
+            new_board.remove_attacks(q)
+            new_board.add_attacks(new_queen)
+
+            h1 = heuristic_one(queens_copy, new_board)
+            
+            if h1 < min_cost:
+                result_queens = queens_copy.copy()
+                result_board = new_board.copy()
+                min_cost = h1
+            elif h1 == min_cost:
+                result_queens = queens_copy.copy()
+                result_board = new_board.copy()
+                potential_sideways.append([result_queens, result_board])
+            
+    if min_cost < current_heuristic:
+        return result_queens, result_board, 0
+    elif min_cost == current_heuristic and sideway!=0:
+        r_ind = np.random.randint(len(potential_sideways))
+        #print(r_ind)
+        return potential_sideways[r_ind][0], potential_sideways[r_ind][1],1
+    else:
+        return queens, board, -1
+
 
 def a_star(board, queens):
     sorted_queens = tuple(sorted([q.position for q in queens], key=lambda q: q[0]))
@@ -205,6 +250,26 @@ def a_star(board, queens):
         history[next_node] = next_node.cost
         expand_nodes(next_node, priority)
 
+def greedy_hill_climbing(board,queens,sideways):
+    queens_history = []
+    status = 2
+    back_sideways = sideways
+    counter = 0
+    h1 = heuristic_one(queens, board)
+    while h1 !=0 and status != -1:      
+        next_queens, next_board, status = get_next_nodes(queens, board, sideways)
+        queens_history.append(next_queens)
+        if status == 1:
+            sideways-=1
+        elif status == 0:
+            sideways = back_sideways
+        queens = next_queens
+        board = next_board
+        counter +=1 
+        h1 = heuristic_one(queens, board)
+        print(counter, h1, sideways,status,queens)
+    return h1,queens_history, queens, board
+
 
 if __name__ == '__main__':
     # parser = argparse.ArgumentParser(description='Process some integers.')
@@ -226,4 +291,5 @@ if __name__ == '__main__':
         print(q.attacking_positions)
         print()
     node = a_star(board=board, queens=queens)
+    a = greedy_hill_climbing(board,queens,10)
     print("Finished!", node)
