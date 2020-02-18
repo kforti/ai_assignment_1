@@ -3,6 +3,7 @@ import numpy as np
 import copy
 import random
 import heapq
+import time
 
 class Map:
     def __init__(self, industrial, commercial, residential, width, height, map):
@@ -43,7 +44,7 @@ def findNeighbors(position, map, distance):
     for x in range(X-distance, X+distance+1):
         if x < 0: continue
         if x >= h: break
-        for y in range(Y-abs(X-x), Y+abs(X-x)+1):
+        for y in range(Y-distance+abs(X-x), Y+distance-abs(X-x)+1):
             if y < 0: continue
             if y >= w: break
             if x == X and y == Y: continue
@@ -77,27 +78,29 @@ class Population:
         previous_list = self.zones[name]
         previous_list.append(position)
         self.zones.update({name:previous_list})
-        self.score -= diff
         return True
 
     def removeZone(self, name, position, map):
-        diff = map.checkMap(position)
         if not self.checkOverlap(position): # no zone here, can't remove
             return False
         self.zones[name].remove(position)
-        self.score += diff
         return True
 
     def calculateScore(self, map):  # whenever you make an action, add or remove, you need to calculate score
+        self.score = 0
         self.industrial = len(self.zones['industrial'])
         self.commercial = len(self.zones['commercial'])
         self.residential = len(self.zones['residential'])
         for pos in self.zones['industrial']:
+            diff = map.checkMap(pos)
+            self.score -= diff
             neighbors = findNeighbors(pos,map,2)
             for items in neighbors:
                 if map.info[items] == 'X': self.score -= 10 # Industrial zones within 2 tiles take a penalty of -10
                 elif items in self.zones['industrial']: self.score += 2   # each industrial tile within 2 squares, bonus of 2
         for pos in self.zones['commercial']:
+            diff = map.checkMap(pos)
+            self.score -= diff
             neighbors_in_2 = findNeighbors(pos,map,2)
             neighbors_in_3 = findNeighbors(pos,map,3)
             for items in neighbors_in_2:
@@ -106,6 +109,8 @@ class Population:
             for items in neighbors_in_3:
                 if items in self.zones['residential']: self.score += 4  # For each residential tile within 3 squares, bonus of 4 points
         for pos in self.zones['residential']:
+            diff = map.checkMap(pos)
+            self.score -= diff
             neighbors_in_2 = findNeighbors(pos,map,2)
             neighbors_in_3 = findNeighbors(pos,map,3)
             for items in neighbors_in_2:
@@ -150,48 +155,152 @@ class priorityQueue:
 
 def randomGenerate(map, K, queue):  # need to modify later: if map.valid_cnt < total zones
     while K > 0:
+        time.sleep(0.0001)
         population = Population()
+        total_count = 0
         if map.valid_cnt >= map.industrial + map.commercial + map.residential:
             generate_i = random.randint(0,map.industrial)
             for i in range(generate_i):
+                if total_count == map.valid_cnt: break
                 x = random.randint(0,map.height-1)
                 y = random.randint(0,map.width-1)
                 while not population.addZone('industrial',(x,y),map):
                     x = random.randint(0,map.height-1)
                     y = random.randint(0,map.width-1)
                     continue
+                total_count += 1
             generate_c = random.randint(0,map.commercial)
             for c in range(generate_c):
+                if total_count == map.valid_cnt: break
                 x = random.randint(0,map.height-1)
                 y = random.randint(0,map.width-1)
                 while not population.addZone('commercial',(x,y),map):
                     x = random.randint(0,map.height-1)
                     y = random.randint(0,map.width-1)
                     continue
+                total_count += 1
             generate_r = random.randint(0,map.residential)
             for r in range(generate_r):
+                if total_count == map.valid_cnt: break
                 x = random.randint(0,map.height-1)
                 y = random.randint(0,map.width-1)
                 while not population.addZone('residential',(x,y),map):
                     x = random.randint(0,map.height-1)
                     y = random.randint(0,map.width-1)
                     continue
+                total_count += 1
             population.calculateScore(map)
         if queue.push(population.score,population):
             K -= 1
         else: continue  # not success, then generate new one
 
-
 # genetic algorithm
-# class Genetic:
-#     def crossover(self, pop1, pop2):
-#         children = [Population(), Population()]
-#         zone_names = ['industrial','commercial','residential']
-#         zone_select = random.randint(0,2)
-#         zone = zone_names[zone_select]  # select one zone to crossover
-#         if
+def mutation(population, map, zone='all', mutation_rate = 0.2):
+    mutation_prob = mutation_rate
+    if random.randint(0,99) >= 100 * mutation_prob:  # do not mutate
+        population.calculateScore(map)
+        return population
+    # otherwise, mutate
+    zone_names = ['industrial', 'commercial', 'residential']
+    if zone == 'all':
+        zone = zone_names[random.randint(0,2)]
+    if len(population.zones[zone]) == 0: # is empty
+        while True:
+            rand_x = random.randint(0,map.height-1)
+            rand_y = random.randint(0,map.width-1)
+            if population.addZone(name=zone,position=(rand_x,rand_y),map=map):
+                break
+    else:
+        pos = population.zones[zone][random.randint(0, len(population.zones[zone]) - 1)]
+        while True:
+            rand_x = random.randint(0,map.height-1)
+            rand_y = random.randint(0,map.width-1)
+            if population.addZone(name=zone,position=(rand_x,rand_y),map=map):
+                break
+        population.removeZone(zone,pos,map)
+    population.calculateScore(map)
+    return population
 
+def crossover(pop1, pop2, queue, map, mutation_rate):
+    children = [Population(), Population()]
+    zone_names = ['industrial','commercial','residential']
+    zone_select = random.randint(0,2)
+    zone = zone_names[zone_select]  # select one zone to crossover
 
+    children[0] = copy.deepcopy(pop1)
+    children[1] = copy.deepcopy(pop2)
+    if set(pop1.zones[zone]) == set(pop2.zones[zone]):  # exactly the same arrangement for this zone, including empty
+        mutation(children[0],zone=zone,map=map,mutation_rate=mutation_rate)
+        mutation(children[1],zone=zone,map=map,mutation_rate=mutation_rate)
+        queue.push(children[0].score,children[0])
+        queue.push(children[1].score,children[1])
+        return
+    else:
+        if len(pop1.zones[zone]) == 0:
+            newpos = pop2.zones[zone][random.randint(0,len(pop2.zones[zone])-1)]
+            if children[0].addZone(zone,newpos,map):
+                children[1].removeZone(zone, newpos, map)
+        elif len(pop2.zones[zone]) == 0:
+            newpos = pop1.zones[zone][random.randint(0,len(pop1.zones[zone])-1)]
+            if children[1].addZone(zone,newpos,map):
+                children[0].removeZone(zone, newpos, map)
+        else:
+            newpos1 = pop2.zones[zone][random.randint(0, len(pop2.zones[zone]) - 1)]
+            newpos2 = pop1.zones[zone][random.randint(0, len(pop1.zones[zone]) - 1)]
+            if children[0].checkOverlap(newpos1) or children[1].checkOverlap(newpos2):
+                mutation(children[0], zone=zone,map=map,mutation_rate=mutation_rate)
+                mutation(children[1], zone=zone,map=map,mutation_rate=mutation_rate)
+            else:
+                children[0].addZone(zone,newpos1,map)
+                children[1].removeZone(zone,newpos1,map)
+                children[0].removeZone(zone,newpos2,map)
+                children[1].addZone(zone,newpos2,map)
+    mutation(children[0],map=map,mutation_rate=mutation_rate)
+    mutation(children[1],map=map,mutation_rate=mutation_rate)
+    queue.push(children[0].score, children[0])
+    queue.push(children[1].score, children[1])
+
+def culling(lowest_k2, queue):
+    queue.pop(lowest_k2)
+
+def elitism(highest_k1, queue, top_k1):
+    heap_k1 = queue.get(highest_k1)
+    heapq.heapify(heap_k1)
+    list_k1 = list(heapq.merge(heap_k1,top_k1))
+    heapq.heapify(list_k1)
+    new_k1 = heapq.nlargest(highest_k1,list_k1)
+    heapq.heapify(new_k1)
+    return new_k1
+
+def geneticAlgorithm(queue, map, K, highest_k1, lowest_k2, mutation_rate):
+    times = [0.1, 0.25, 0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 666]
+    current = times.pop(0)
+    randomGenerate(map, K, queue)
+    start_time = time.time()
+
+    top_k1 = queue.get(highest_k1)
+    time_elapsed = 0
+    while time_elapsed < 10:
+        size_q = queue.sizeq()
+        states = queue.get(size_q)
+        queue.pop(size_q)   # clear up queue
+        for id,state in enumerate(states):
+            mate_id = random.randint(0,highest_k1-1)
+            mate = top_k1[mate_id]
+            crossover(state[2],mate[2],queue,map,mutation_rate=mutation_rate)
+        heapq.heapify(top_k1)
+        top_k1 = elitism(highest_k1,queue,top_k1)
+        if queue.sizeq() > K:
+            culling(queue.sizeq() - K,queue)
+
+        # printMap(heapq.nlargest(1,top_k1)[0],map)
+        time_elapsed = time.time() - start_time
+        if time_elapsed >= current:
+            print("t: %d"%current)
+            printMap(heapq.nlargest(1, top_k1)[0], map)
+            current = times.pop(0)
+    printMap(heapq.nlargest(1, top_k1)[0], map)
+    print(time_elapsed)
 
 
 def printMap(populationMap,map):    # print the graph and the score of one map      (from the queue!)
@@ -229,9 +338,5 @@ if __name__ == "__main__":
     urbanMap = setup("urban 2.txt")
     mapQueue = priorityQueue()
 
+    geneticAlgorithm(mapQueue,urbanMap,400,30,10,0.8)
 
-
-    randomGenerate(urbanMap,10,mapQueue)
-
-    for items in mapQueue.queue:
-        printMap(items,urbanMap)
