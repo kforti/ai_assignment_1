@@ -73,7 +73,8 @@ class Population:
 
     def addZone(self, name, position, map): # if successfully added, return True, otherwise return False
         diff = map.checkMap(position)
-        if diff == 0 or self.checkOverlap(position):
+        present_zone, valid_zone = checkZoneInfo(self,name,map)
+        if diff == 0 or self.checkOverlap(position) or present_zone >= valid_zone:
             return False
         previous_list = self.zones[name]
         previous_list.append(position)
@@ -155,46 +156,53 @@ class priorityQueue:
 
 def randomGenerate(map, K, queue):  # need to modify later: if map.valid_cnt < total zones
     while K > 0:
-        time.sleep(0.0001)
+        # time.sleep(0.0001)
         population = Population()
         total_count = 0
-        if map.valid_cnt >= map.industrial + map.commercial + map.residential:
-            generate_i = random.randint(0,map.industrial)
-            for i in range(generate_i):
-                if total_count == map.valid_cnt: break
+        generate_i = random.randint(0,map.industrial)
+        for i in range(generate_i):
+            if total_count == map.valid_cnt: break
+            x = random.randint(0,map.height-1)
+            y = random.randint(0,map.width-1)
+            while not population.addZone('industrial',(x,y),map):
                 x = random.randint(0,map.height-1)
                 y = random.randint(0,map.width-1)
-                while not population.addZone('industrial',(x,y),map):
-                    x = random.randint(0,map.height-1)
-                    y = random.randint(0,map.width-1)
-                    continue
-                total_count += 1
-            generate_c = random.randint(0,map.commercial)
-            for c in range(generate_c):
-                if total_count == map.valid_cnt: break
+                continue
+            total_count += 1
+        generate_c = random.randint(0,map.commercial)
+        for c in range(generate_c):
+            if total_count == map.valid_cnt: break
+            x = random.randint(0,map.height-1)
+            y = random.randint(0,map.width-1)
+            while not population.addZone('commercial',(x,y),map):
                 x = random.randint(0,map.height-1)
                 y = random.randint(0,map.width-1)
-                while not population.addZone('commercial',(x,y),map):
-                    x = random.randint(0,map.height-1)
-                    y = random.randint(0,map.width-1)
-                    continue
-                total_count += 1
-            generate_r = random.randint(0,map.residential)
-            for r in range(generate_r):
-                if total_count == map.valid_cnt: break
+                continue
+            total_count += 1
+        generate_r = random.randint(0,map.residential)
+        for r in range(generate_r):
+            if total_count == map.valid_cnt: break
+            x = random.randint(0,map.height-1)
+            y = random.randint(0,map.width-1)
+            while not population.addZone('residential',(x,y),map):
                 x = random.randint(0,map.height-1)
                 y = random.randint(0,map.width-1)
-                while not population.addZone('residential',(x,y),map):
-                    x = random.randint(0,map.height-1)
-                    y = random.randint(0,map.width-1)
-                    continue
-                total_count += 1
-            population.calculateScore(map)
+                continue
+            total_count += 1
+        population.calculateScore(map)
         if queue.push(population.score,population):
             K -= 1
         else: continue  # not success, then generate new one
 
 # genetic algorithm
+def checkZoneInfo(population, zone, map):
+    if zone == 'industrial':
+        return len(population.zones[zone]), map.industrial
+    if zone == 'commercial':
+        return len(population.zones[zone]), map.commercial
+    if zone == 'residential':
+        return len(population.zones[zone]), map.residential
+    return 0, 0
 def mutation(population, map, zone='all', mutation_rate = 0.2):
     mutation_prob = mutation_rate
     if random.randint(0,99) >= 100 * mutation_prob:  # do not mutate
@@ -204,20 +212,25 @@ def mutation(population, map, zone='all', mutation_rate = 0.2):
     zone_names = ['industrial', 'commercial', 'residential']
     if zone == 'all':
         zone = zone_names[random.randint(0,2)]
-    if len(population.zones[zone]) == 0: # is empty
+    if len(population.zones[zone]) == 0 and checkZoneInfo(population,zone,map)[1] != 0: # is empty
         while True:
             rand_x = random.randint(0,map.height-1)
             rand_y = random.randint(0,map.width-1)
             if population.addZone(name=zone,position=(rand_x,rand_y),map=map):
                 break
-    else:
+    elif len(population.zones[zone]) != 0 and checkZoneInfo(population,zone,map)[0] != checkZoneInfo(population,zone,map)[1]:
         pos = population.zones[zone][random.randint(0, len(population.zones[zone]) - 1)]
         while True:
             rand_x = random.randint(0,map.height-1)
             rand_y = random.randint(0,map.width-1)
             if population.addZone(name=zone,position=(rand_x,rand_y),map=map):
                 break
-        population.removeZone(zone,pos,map)
+        if random.randint(0,99) >= 100 * mutation_prob: # only move the zone to another place
+            population.removeZone(zone,pos,map)
+        else:   # add a zone, but need to check if it's acceptable
+            present_zone, valid_zone = checkZoneInfo(population,zone,map)
+            if present_zone > valid_zone: population.removeZone(zone,pos,map)  # can't add
+
     population.calculateScore(map)
     return population
 
@@ -280,6 +293,8 @@ def geneticAlgorithm(queue, map, K, highest_k1, lowest_k2, mutation_rate):
 
     top_k1 = queue.get(highest_k1)
     time_elapsed = 0
+    best_score = -999
+    best_time = 0
     while time_elapsed < 10:
         size_q = queue.sizeq()
         states = queue.get(size_q)
@@ -295,13 +310,35 @@ def geneticAlgorithm(queue, map, K, highest_k1, lowest_k2, mutation_rate):
 
         # printMap(heapq.nlargest(1,top_k1)[0],map)
         time_elapsed = time.time() - start_time
-        if time_elapsed >= current:
-            print("t: %d"%current)
-            printMap(heapq.nlargest(1, top_k1)[0], map)
-            current = times.pop(0)
-    printMap(heapq.nlargest(1, top_k1)[0], map)
+        if heapq.nlargest(1, top_k1)[0][0] > best_score:
+            best_score = heapq.nlargest(1, top_k1)[0][0]
+            best_time = time_elapsed
+        # if time_elapsed >= current:
+        #     print("t: %d"%current)
+        #     printMap(heapq.nlargest(1, top_k1)[0], map)
+        #     current = times.pop(0)
+    # printMap(heapq.nlargest(1, top_k1)[0], map)
     print(time_elapsed)
+    printFile(heapq.nlargest(1, top_k1)[0],best_time,best_score,map)
 
+
+def printFile(population, best_time, best_score, map):
+    fp = open("result.txt","w")
+    show_map = population[2].mergeMap(map)
+    w, h= map.width, map.height
+    fp.write(str(best_score)+"\n")
+    fp.write(str(best_time)+"\n")
+    for x in range(h):
+        printline = ""
+        for y in range(w):
+            info = show_map[(x,y)]
+            if info.__len__() == 1 and info != 'X' and info != 'S':
+                info = '.'
+            if info.__len__() > 1:
+                info = info[0]
+            printline += info + " "
+        fp.write(printline+"\n")
+    fp.close()
 
 def printMap(populationMap,map):    # print the graph and the score of one map      (from the queue!)
     show_map = populationMap[2].mergeMap(map)
@@ -338,5 +375,5 @@ if __name__ == "__main__":
     urbanMap = setup("urban 2.txt")
     mapQueue = priorityQueue()
 
-    geneticAlgorithm(mapQueue,urbanMap,400,30,10,0.8)
+    geneticAlgorithm(mapQueue,urbanMap,300,30,10,0.4)
 
