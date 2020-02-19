@@ -1,0 +1,11 @@
+Best Score: 42
+Time of best score: 0.5525219440460205
+Number Of Restarts: 44
+ .  .  .  X  . 
+ .  X  .  .  . 
+ .  .  .  .  X 
+ .  .  c  .  . 
+ S  r  S  .  . 
+ c  r  .  .  . 
+
+
