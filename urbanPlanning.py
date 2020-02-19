@@ -381,11 +381,11 @@ def setup(filename):
 
 ########################Simulated Annealing Start##########################################################################################################################################################################################
 class SimulatedAnnealing:
-    def __init__(self, input_file, initial_temperature, time_step, run_time):
+    def __init__(self, input_file, initial_temperature, run_time):
         self.actions = ['move', 'add', 'remove']
         self.initial_temperature = initial_temperature # set temperature
         self.restart_count = 0 # number of times it will restart
-        self.time_step = time_step
+        self.time_step = 1
         self.run_time = run_time # how long the algorithm will run
         self.start_time = None
         self.best_population_time = None # how long it took to get the best map
@@ -401,7 +401,7 @@ class SimulatedAnnealing:
             n = 0
             population = self.randomGenerateAnnealing()
             temperature = self.initial_temperature
-            while temperature > 0 and (time.time()-self.start_time) < self.run_time:
+            while temperature > 0:# and (time.time()-self.start_time) < self.run_time:
                 valid_action = False
                 # pick a random action to make
                 action = self.actions[random.randint(0,len(self.actions)-1)]
@@ -430,7 +430,9 @@ class SimulatedAnnealing:
                     n += self.time_step
                     prev_temperature = temperature
                     #temperature = prev_temperature - math.log10(n)
-                    temperature = (0.9**n)*(prev_temperature)
+                    temperature = ((0.0275*self.map.width*self.map.height)**n)*(prev_temperature) # geometric
+                    #temperature = prev_temperature / math.log2(2 + n)
+                    #temperature = prev_temperature /(1+(0.9*prev_temperature))
             # after running, update the best population
             if self.best_population == None or self.best_population.score < population.score:
                 self.best_population_time = time.time() - self.start_time
@@ -554,11 +556,13 @@ class SimulatedAnnealing:
         return population
 
     def makeDecision(self, dE, temperature):
+        # accept the new state since it gives us a better score
         if dE > 0:
             return True
+        # accept the new state (worse) with some probability
         elif temperature > 0:
-            probability = np.exp(dE/temperature)
-            if probability > 0:
+            # the probability that we will take a worse step
+            if np.exp(dE/temperature) >= random.random():
                 return True
         return False
 
@@ -576,29 +580,29 @@ class SimulatedAnnealing:
         outputString = ''
         for position in self.map.info:
             if position in population.zones['industrial']:
-                outputString += ' i '
+                outputString += 'i '
             elif position in population.zones['commercial']:
-                outputString += ' c '
+                outputString += 'c '
             elif position in population.zones['residential']:
-                outputString += ' r '
+                outputString += 'r '
             else:
                 if self.map.info[position] == 'X' or self.map.info[position] == 'S':
-                    outputString += ' ' + self.map.info[position] + ' '
+                    outputString += self.map.info[position] + ' '
                 else:
-                    outputString += ' ' + '.' + ' '
+                    outputString += '.' + ' '
             if position[1] == self.map.width - 1:
                 outputString += '\n'
         outputString += '\n\n'
         return outputString
 
     def saveMapToFile(self, population, outputString):
-        fp = open("sa_result.txt", "w")
-        fp.write('Best Score: {}\n'.format(population.score)) # write the best score to file
-        fp.write('Time of best score: {}\n'.format(self.best_population_time)) # write the time of best map to file
-        fp.write('Number Of Restarts: {}\n'.format(self.restart_count))
+        fp = open("hc_result.txt", "w")
+        fp.write('Score: {}\n'.format(population.score)) # write the best score to file
+        fp.write('Time: {}\n'.format(self.best_population_time)) # write the time of best map to file
         fp.write(outputString) # write the map to a file
+        fp.write('Restarts: {}\n'.format(self.restart_count))
         fp.close()
-####################Simulated Annealing End########################################################################################################################################################################################################################
+
 
 # get the name of the input file for the map and the algorithm used
 def getInput():
@@ -616,6 +620,6 @@ if __name__ == "__main__":
         mapQueue = priorityQueue()
         geneticAlgorithm(mapQueue,urbanMap,300,30,10,0.4)
     elif algorithm.upper() == 'HC':
-        # parameters: (input_file, restart_count, initial_temperature, time_step, run_time)
-        SA = SimulatedAnnealing(input_file, 5, 1, 1)
+        # parameters: (input_file, initial_temperature, time_step, run_time)
+        SA = SimulatedAnnealing(input_file, 5, 10)
         SA.run()
