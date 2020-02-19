@@ -4,6 +4,8 @@ import copy
 import random
 import heapq
 import time
+import math
+import argparse
 
 class Map:
     def __init__(self, industrial, commercial, residential, width, height, map):
@@ -13,6 +15,7 @@ class Map:
         self.width = width
         self.height = height
         self.scenic = []
+        self.free_space = [] # empty tiles
         self.valid_cnt = self.createMap(map)
 
     def createMap(self, map):
@@ -25,6 +28,9 @@ class Map:
                     invalid_cnt += 1
                 if map[h][w] == 'S':
                     self.scenic.append((h,w))
+                # save the empty tile positions
+                if map[h][w] != 'S' and map[h][w] != 'X':
+                    self.free_space.append((h,w))
         return self.height * self.width - invalid_cnt
 
     def checkMap(self, position):   # if the position is valid, return difficulty, otherwise return 0
@@ -64,6 +70,8 @@ class Population:
         self.commercial = 0
         self.residential = 0
         self.score = 0
+        self.extra_zones = [] # extra zones that we can place: ['name1', 'name2', 'namex']
+        self.places_to_build = None # tile locations where we can build: empty tiles and scenic tiles
 
     def checkOverlap(self, position):   # find the positions already build a zone
         for items in self.zones:
@@ -323,7 +331,7 @@ def geneticAlgorithm(queue, map, K, highest_k1, lowest_k2, mutation_rate):
 
 
 def printFile(population, best_time, best_score, map):
-    fp = open("result.txt","w")
+    fp = open("ga_result.txt","w")
     show_map = population[2].mergeMap(map)
     w, h= map.width, map.height
     fp.write(str(best_score)+"\n")
@@ -371,9 +379,240 @@ def setup(filename):
     return urbanMap
 
 
+########################Simulated Annealing Start##########################################################################################################################################################################################
+class SimulatedAnnealing:
+    def __init__(self, input_file, restart_count, initial_temperature, time_step, run_time):
+        self.actions = ['move', 'add', 'remove']
+        self.initial_temperature = initial_temperature # set temperature
+        self.restart_count = restart_count # number of times it will restart
+        self.time_step = time_step
+        self.run_time = run_time # how long the algorithm will run
+        self.start_time = None
+        self.best_population_time = None # how long it took to get the best map
+        self.best_population = None # the best map
+        self.map = setup(input_file) # create new map
+
+    # run simulated annealing algorithm
+    def run(self):
+        # store the program's start time
+        self.start_time = time.time()
+        for i in range(self.restart_count):
+            # create a new population
+            population = self.randomGenerateAnnealing()
+            n = 0
+            temperature = self.initial_temperature
+            while (time.time() - self.start_time) < self.run_time:
+                valid_action = False
+                # pick a random action to make
+                action = self.actions[random.randint(0,len(self.actions)-1)]
+                ### ACTION -> MOVE A ZONE
+                if action == 'move':
+                    # get all of the zones that are on the map
+                    zones = self.getZones(population)
+                    # make sure that there are zones to place and places to move it
+                    if len(zones) > 0 and len(population.places_to_build) > 0:
+                        population = self.moveZoneAnnealing(population, zones, temperature)
+                        valid_action = True
+                ### ACTION -> ADD A ZONE
+                elif action == 'add':
+                    if len(population.extra_zones) > 0 and len(population.places_to_build) > 0:
+                        population = self.addZoneAnnealing(population, temperature)
+                        valid_action = True
+                ### ACTION -> REMOVE A ZONE
+                elif action == 'remove':
+                    # get all of the zones that are placed on the map
+                    zones = self.getZones(population)
+                    if len(zones) > 0:
+                        population = self.removeZoneAnnealing(population, zones, temperature)
+                        valid_action = True
+                    # only update the temperature if we performed a valid action
+                if valid_action == True:
+                    n += self.time_step
+                    prev_temperature = temperature
+                    temperature = prev_temperature - math.log10(n)
+            # after running, update the best population
+            if self.best_population == None or self.best_population.score < population.score:
+                self.best_population_time = time.time() - self.start_time
+                self.best_population = None
+                self.best_population = population
+        text = self.printMapAnnealing(self.best_population)
+        self.saveMapToFile(self.best_population, text)
+
+    def moveZoneAnnealing(self, population, zones, temperature):
+        # copy the current population
+        updated_population = copy.deepcopy(population)
+        # get the zone that we are going to move
+        zone_index = random.randint(0,len(zones)-1)
+        zone_to_move = zones[zone_index]
+        # get the new location for the zone
+        pos_index = random.randint(0,len(updated_population.places_to_build)-1)
+        new_position = updated_population.places_to_build.pop(pos_index)
+        # move the zone
+        updated_population.removeZone(zone_to_move['name'], zone_to_move['position'], self.map)
+        updated_population.addZone(zone_to_move['name'], new_position, self.map)
+        # update the places where we can build by adding the position where the zone was previously located
+        updated_population.places_to_build.append(zone_to_move['position'])
+        # calculate the difference in scores
+        updated_population.calculateScore(self.map)
+        population.calculateScore(self.map)
+        dE = updated_population.score - population.score
+        # decide whether or not to update the current population
+        if self.makeDecision(dE, temperature) == True:
+            population = None
+            population = updated_population
+        else:
+            updated_population = None
+        return population
+
+    def addZoneAnnealing(self, population, temperature):
+        # copy the current population
+        updated_population = copy.deepcopy(population)
+        # get a zone to add
+        zone_index = random.randint(0, len(updated_population.extra_zones)-1)
+        zone_to_add = updated_population.extra_zones.pop(zone_index)
+        # find an empty space to add zone
+        position_index = random.randint(0, len(updated_population.places_to_build)-1)
+        zone_position = updated_population.places_to_build.pop(position_index)
+        # add zone to position
+        updated_population.addZone(zone_to_add, zone_position, self.map)
+        population.calculateScore(self.map)
+        updated_population.calculateScore(self.map)
+        dE = updated_population.score - population.score
+        if self.makeDecision(dE, temperature) == True:
+            population = None
+            population = updated_population
+        else:
+            updated_population = None
+        return population
+
+    def removeZoneAnnealing(self, population, zones, temperature):
+        # copy the current population
+        updated_population = copy.deepcopy(population)
+        # get a random zone to remove
+        zone_index = random.randint(0, len(zones)-1)
+        zone_to_remove = zones[zone_index]
+        # remove zone position
+        updated_population.removeZone(zone_to_remove['name'], zone_to_remove['position'], self.map)
+        # add zone to extra_zones
+        updated_population.extra_zones.append(zone_to_remove['name'])
+        # calculate map score
+        population.calculateScore(self.map)
+        updated_population.calculateScore(self.map)
+        dE = updated_population.score - population.score
+        if self.makeDecision(dE, temperature) == True:
+            population = None
+            population = updated_population
+        else:
+            updated_population = None
+        return population
+
+    # create a new random population [for simulated annealing]
+    def randomGenerateAnnealing(self):
+        # creat new populaion
+        population = Population()
+        # tile locations where we can build zones
+        population.places_to_build = copy.deepcopy(self.map.free_space) + copy.deepcopy(self.map.scenic)
+        map_size = self.map.height * self.map.width
+        # select a random number of zones to place on the map
+        industrial_count = random.randint(0, self.map.industrial)
+        commercial_count = random.randint(0, self.map.commercial)
+        residential_count = random.randint(0, self.map.residential)
+        zones = []
+        # don't try to place a zone if prof does not want us to!
+        if industrial_count > 0:
+            zones.append({'name': 'industrial', 'count': industrial_count})
+        if commercial_count > 0:
+            zones.append({'name': 'commercial', 'count': commercial_count})
+        if residential_count > 0:
+            zones.append({'name': 'residential', 'count': residential_count})
+        # store extra zones
+        for count in range(self.map.industrial - industrial_count):
+            population.extra_zones.append('industrial')
+        for count in range(self.map.commercial - commercial_count):
+            population.extra_zones.append('commercial')
+        for count in range(self.map.residential - residential_count):
+            population.extra_zones.append('residential')
+        # calculate the number of empty tiles (plus scenic tiles) we have left
+        while len(population.places_to_build) > 0 and len(zones) > 0:
+            # select a random zone to place
+            zone_index = random.randint(0, len(zones)-1)
+            zone_to_add = zones[zone_index]
+            # get a random position to place zone
+            position_index  = random.randint(0, len(population.places_to_build)-1)
+            zone_position = population.places_to_build.pop(position_index)
+            # add the zone to the map
+            population.addZone(zone_to_add['name'], zone_position, self.map)
+            # decrement the number of zones to place
+            zones[zone_index]['count'] -= 1
+            # get rid of this zone if there arent any left to place
+            if zones[zone_index]['count'] == 0:
+                del(zones[zone_index])
+        # calculate the score for this population
+        population.calculateScore(self.map)
+        return population
+
+    def makeDecision(self, dE, temperature):
+        if dE > 0:
+            return True
+        elif temperature > 0:
+            probability = np.exp(dE/temperature)
+            if probability > 0:
+                return True
+        return False
+
+    # restructure the format of the zones for easy access
+    def getZones(self, population):
+        zones = []
+        for name in population.zones:
+            for position in population.zones[name]:
+                item = {'name': name, 'position': position}
+                zones.append(item)
+        return zones
+
+    def printMapAnnealing(self, population):
+        population.calculateScore(self.map)
+        outputString = ''
+        for position in self.map.info:
+            if position in population.zones['industrial']:
+                outputString += ' i '
+            elif position in population.zones['commercial']:
+                outputString += ' c '
+            elif position in population.zones['residential']:
+                outputString += ' r '
+            else:
+                if self.map.info[position] == 'X' or self.map.info[position] == 'S':
+                    outputString += ' ' + self.map.info[position] + ' '
+                else:
+                    outputString += ' ' + '.' + ' '
+            if position[1] == self.map.width - 1:
+                outputString += '\n'
+        outputString += '\n\n'
+        return outputString
+
+    def saveMapToFile(self, population, outputString):
+        fp = open("sa_result.txt", "w")
+        fp.write('Best Score: {}\n'.format(population.score)) # write the best score to file
+        fp.write('Time of best score: {}\n'.format(self.best_population_time)) # write the time of best map to file
+        fp.write(outputString) # write the map to a file
+        fp.close()
+####################Simulated Annealing End########################################################################################################################################################################################################################
+
+# get the name of the input file for the map and the algorithm used
+def getInput():
+    my_parser = argparse.ArgumentParser(description='Please add some command line inputs... if you do not, I won"t know how to behave')
+    my_parser.add_argument('input_file', help='map')
+    my_parser.add_argument('algorithm', help='algorithm')
+    args = my_parser.parse_args()
+    return args.input_file, args.algorithm
+
 if __name__ == "__main__":
-    urbanMap = setup("urban 2.txt")
-    mapQueue = priorityQueue()
-
-    geneticAlgorithm(mapQueue,urbanMap,300,30,10,0.4)
-
+    # get the map and algorithm
+    input_file, algorithm = getInput()
+    if algorithm.upper() == 'GA':
+        urbanMap = setup(input_file)
+        mapQueue = priorityQueue()
+        geneticAlgorithm(mapQueue,urbanMap,300,30,10,0.4)
+    elif algorithm.upper() == 'HC':
+        # parameters: (input_file, restart_count, initial_temperature, time_step, run_time)
+        SA = SimulatedAnnealing(input_file, 10, 5, 1, 10)
+        SA.run()
