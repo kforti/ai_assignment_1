@@ -304,25 +304,6 @@ def a_star(board, queens, heuristic):
         history[next_node] = next_node.cost
         expand_nodes(next_node, priority, heuristic)
 
-def solve_within_ten_seconds(heuristics):
-    import time
-
-    is_done = False
-    n = 4
-    while not is_done:
-        board = Board(n)
-        queens, board = create_random_queens(n, board)
-        for heuristic in heuristics:
-            start = time.time()
-            node = a_star(board, queens, heuristic)
-            end = time.time()
-
-            runtime = end - start
-            print(f"number of queens: {n}; Runtime: {runtime}; Cost: {node.cost}; Heuristic: {heuristic}")
-            if runtime > 10:
-                is_done = True
-        n += 1
-
 
 def greedy_hill_climbing(board, queens, sideways):
     queens_history = []
@@ -345,6 +326,33 @@ def greedy_hill_climbing(board, queens, sideways):
     return h1,queens_history, queens, board
 
 
+def solve_within_ten_seconds(heuristics):
+    import time
+
+    is_done = False
+    n = 4
+    while not is_done:
+        board = Board(n)
+        queens, board = create_random_queens(n, board)
+        for heuristic in heuristics:
+            start = time.time()
+            node = a_star(board, queens, heuristic)
+            end = time.time()
+
+            runtime = end - start
+            print(f"number of queens: {n}; Runtime: {runtime}; Cost: {node.cost}; Heuristic: {heuristic}")
+            if runtime > 10:
+                is_done = True
+        n += 1
+
+
+def evaluate_algorithms(algorithms):
+    import time
+
+    for _ in algorithms:
+        solve_within_ten_seconds([heuristic_one, heuristic_two])
+
+
 def get_input():
     my_parser = argparse.ArgumentParser(description='Please add some command line inputs... if you do not, I won"t know how to behave')
     my_parser.add_argument('input_file', help='Name of the file containing the n-queens board')
@@ -352,14 +360,6 @@ def get_input():
     my_parser.add_argument('heuristic', help='Specifies the heuristic (H1 or H2)')
     args = my_parser.parse_args()
     return args.input_file, args.strategy, args.heuristic
-
-
-def evaluate_algorithms(algorithms):
-    import time
-
-    for _ in algorithms:
-        pass
-
 
 
 if __name__ == '__main__':
