@@ -403,8 +403,9 @@ class SimulatedAnnealing:
             temperature = self.initial_temperature
             recent_scores = []
             best_score = None
+            size = self.map.width * self.map.height
             # restart if we haven't made progress in a while or we have ran out of time
-            while len(recent_scores) < 701 and (time.time()-self.start_time) < self.run_time:
+            while len(recent_scores) < (size*7.1) and (time.time()-self.start_time) < self.run_time:
                 valid_action = False
                 # pick a random action to make
                 action = self.actions[random.randint(0,len(self.actions)-1)]
@@ -438,7 +439,6 @@ class SimulatedAnnealing:
                     n += self.time_step
                     prev_temperature = temperature
                     temperature = (0.9**n)*(prev_temperature) # geometric
-
 
             # after running, update the best population
             if self.best_population == None or self.best_population.score < population.score:
