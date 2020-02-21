@@ -1,9 +1,21 @@
 import argparse
+import random
 import queue
 import copy
 from dataclasses import dataclass, field
 from typing import Any
 
+
+def create_random_queens(n, board):
+    queens = []
+    for i in range(n):
+        pos = (random.randint(1, n), i + 1)
+        q = Queen(id=i, position=pos, weight=random.randint(1, 9))
+        q.determine_initial_attacks(board)
+        queens.append(q)
+    for q in queens:
+        board.add_attacks(q)
+    return queens, board
 
 
 def create_queens(data, board):
@@ -143,7 +155,19 @@ def heuristic_one(queens, board):
         return 0
 
 
-def expand_nodes(node, priority):
+def heuristic_two(queens, board):
+    attacking_pairs = set()
+    for q in queens:
+        attackers = board.get_queens_attacking(q)
+        for a in attackers:
+            lq = a if a.position[0] < q.position[0] else q
+            gq = a if a.position[0] > q.position[0] else q
+            mw = a.weight if a.weight < q.weight else q.weight
+            attacking_pairs.add((lq, gq, mw))
+    return sum(pair[2]**2 for pair in attacking_pairs)
+
+
+def expand_nodes(node, priority, heuristic):
     board = node.board
     queens = node.queens
     start_cost = node.cost
@@ -165,7 +189,7 @@ def expand_nodes(node, priority):
             new_board.remove_attacks(q)
             new_board.add_attacks(new_queen)
 
-            h1 = heuristic_one(queens_copy, new_board)
+            h1 = heuristic(queens_copy, new_board)
             cost = move_cost(abs(q.position[1] - m[1]), q.weight)
             total_cost = cost + start_cost
 
@@ -179,11 +203,11 @@ def expand_nodes(node, priority):
             priority.put(new_node)
 
 
-def a_star(board, queens):
+def a_star(board, queens, heuristic):
     sorted_queens = tuple(sorted([q.position for q in queens], key=lambda q: q[0]))
     priority = queue.PriorityQueue()
     node_id = 0
-    h1 = heuristic_one(queens, board)
+    h1 = heuristic(queens, board)
     start_node = PrioritizedNode(cost=0, queens=queens, board=board, sorted_queens=sorted_queens, id=node_id, heuristic=h1)
     priority.put(start_node)
 
@@ -203,7 +227,27 @@ def a_star(board, queens):
         if next_node in history and history[next_node] < next_node.cost:
             continue
         history[next_node] = next_node.cost
-        expand_nodes(next_node, priority)
+        expand_nodes(next_node, priority, heuristic)
+
+def solve_within_ten_seconds(heuristics):
+    import time
+
+    is_done = False
+    n = 4
+    while not is_done:
+        board = Board(n)
+        queens, board = create_random_queens(n, board)
+        for heuristic in heuristics:
+            start = time.time()
+            node = a_star(board, queens, heuristic)
+            end = time.time()
+
+            runtime = end - start
+            print(f"number of queens: {n}; Runtime: {runtime}; Cost: {node.cost}; Heuristic: {heuristic}")
+            if runtime > 10:
+                is_done = True
+        n += 1
+
 
 
 if __name__ == '__main__':
@@ -217,13 +261,19 @@ if __name__ == '__main__':
     # args = parser.parse_args()
     # print(args.accumulate(args.integers))
 
-    queens = [((1, 1), 9), ((2, 3), 9), ((3, 2), 1), ((4, 4), 1)]#, ((5, 3), 1)]
+
+    #solve_within_ten_seconds([heuristic_one, heuristic_two])
+    import time
+    queens = [((1, 1), 9), ((2, 3), 9), ((3, 2), 1), ((4, 4), 1), ((5, 3), 1)]
     board = Board(n=len(queens))
     queens, board = create_queens(queens, board)
 
-    for q in queens:
-        print(q.weight)
-        print(q.attacking_positions)
-        print()
-    node = a_star(board=board, queens=queens)
-    print("Finished!", node)
+    # node = a_star(board=board, queens=queens, heuristic=heuristic_one)
+    # print("Finished!", node)
+
+    start = time.time()
+    node = a_star(board, queens, heuristic_one)
+    end = time.time()
+
+    runtime = end - start
+    print(f"number of queens: {len(queens)}; Runtime: {runtime}; Cost: {node.cost}; Heuristic: {heuristic_two}")
