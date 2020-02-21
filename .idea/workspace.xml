@@ -2,10 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="47df2fd6-bd7d-4ec8-8ed0-e1e5532734b2" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/heavy_n_queens/heavy_n_queens.py" beforeDir="false" afterPath="$PROJECT_DIR$/heavy_n_queens/heavy_n_queens.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/urban_planning/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/urban_planning/urban_planning.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/heavy_n_queens/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/heavy_n_queens/heavy_n_queens.py" beforeDir="false" afterPath="$PROJECT_DIR$/heavy_n_queens.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -50,7 +48,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/heavy_n_queens/heavy_n_queens.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/heavy_n_queens.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
