@@ -2,8 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="47df2fd6-bd7d-4ec8-8ed0-e1e5532734b2" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/urban_planning/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/urban_planning/urban_planning.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ga_result.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/hc_result.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/sa_result.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/urban.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/urbanPlanning.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/urbanplaza.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/heavy_n_queens/heavy_n_queens.py" beforeDir="false" afterPath="$PROJECT_DIR$/heavy_n_queens/heavy_n_queens.py" afterDir="false" />
     </list>
@@ -102,7 +106,7 @@
       <workItem from="1581614140723" duration="28547000" />
       <workItem from="1581733813329" duration="9965000" />
       <workItem from="1582238625432" duration="592000" />
-      <workItem from="1582302988462" duration="332000" />
+      <workItem from="1582302988462" duration="1063000" />
     </task>
     <servers />
   </component>
