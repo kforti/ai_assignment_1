@@ -291,5 +291,10 @@ if __name__ == '__main__':
         print(q.attacking_positions)
         print()
     node = a_star(board=board, queens=queens)
-    a = greedy_hill_climbing(board,queens,10)
+    h1 =200
+    cnt = 0
+    while h1!=0 and cnt<10:
+        h1, queens_history, sideways, queens = greedy_hill_climbing(board,queens,10)
+        cnt+=1
+    print("h1")
     print("Finished!", node)
