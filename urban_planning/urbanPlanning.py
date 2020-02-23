@@ -396,16 +396,16 @@ class SimulatedAnnealing:
     def run(self):
         # store the program's start time
         self.start_time = time.time()
-        while (time.time() - self.start_time) < self.run_time:
+        while (time.time()-self.start_time) < self.run_time:
             # create a new population
             n = 0
             population = self.randomGenerateAnnealing()
             temperature = self.initial_temperature
             recent_scores = []
-            best_score = None
+            current_pop = None
             size = self.map.width * self.map.height
             # restart if we haven't made progress in a while or we have ran out of time
-            while len(recent_scores) < (size*7.1) and (time.time()-self.start_time) < self.run_time:
+            while len(recent_scores) < (5*size) and (time.time()-self.start_time) < self.run_time:
                 valid_action = False
                 # pick a random action to make
                 action = self.actions[random.randint(0,len(self.actions)-1)]
@@ -431,9 +431,10 @@ class SimulatedAnnealing:
                         valid_action = True
                     # only update the temperature if we performed a valid action
                 if valid_action == True:
-                    if best_score == None or population.score > best_score:
-                        best_score = population.score
+                    if current_pop == None or population != current_pop:
+                        current_pop = population
                         recent_scores = []
+                        recent_scores.append(population.score)
                     else:
                         recent_scores.append(population.score)
                     n += self.time_step
@@ -452,6 +453,9 @@ class SimulatedAnnealing:
     def moveZoneAnnealing(self, population, zones, temperature):
         # copy the current population
         updated_population = copy.deepcopy(population)
+        #print('{} == {}: {}\n\n'.format(id(population), id(updated_population), (population)==(updated_population)))
+        if updated_population == population:
+            print(True)
         # get the zone that we are going to move
         zone_index = random.randint(0,len(zones)-1)
         zone_to_move = zones[zone_index]
@@ -607,7 +611,6 @@ class SimulatedAnnealing:
         fp.write('Score: {}\n'.format(population.score)) # write the best score to file
         fp.write('Time: {}\n'.format(self.best_population_time)) # write the time of best map to file
         fp.write(outputString) # write the map to a file
-        fp.write('Restarts: {}\n'.format(self.restart_count))
         fp.close()
 
 
