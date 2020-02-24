@@ -450,7 +450,7 @@ def test_algos():
 
 
 def evaluate_algorithms():
-    out_file = "n_queens/algorithm_evaluation"
+    out_file = "analysis/algorithm_evaluation"
     algos = ['hill_climb', 'astar']
     heuristics = [HeuristicOne(), HeuristicTwo()]
     n = 5
@@ -497,7 +497,7 @@ def run_sideways_eval():
     my_parser.add_argument('heuristic', help='Specifies the heuristic (H1 or H2)')
     args = my_parser.parse_args()
     print(args)
-    with open("n_queens/sideways.txt", "a") as f:
+    with open("analysis/sideways.txt", "a") as f:
         try:
             determine_sideways_moves(HeuristicOne, n=args.n, sideway_moves=args.sideway_moves, fout=f)
         except KeyboardInterrupt:
@@ -540,7 +540,7 @@ def analyze_eval():
     hc1_values = []
     hc2_values = []
 
-    with open("/n_queens/algorithm_evaluation", 'r') as f:
+    with open("/analysis/algorithm_evaluation", 'r') as f:
         headers = False
         for line in f:
             header_vals = []
