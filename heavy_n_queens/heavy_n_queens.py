@@ -213,7 +213,39 @@ class HeuristicTwo:
                 mw = a.weight if a.weight < q.weight else q.weight
                 attacking_pairs.add((lq, gq, mw))
         return sum(pair[2]**2 for pair in attacking_pairs)
+    
+class HeuristicThree:
+    def __repr__(self):
+        return "HeuristicOne"
 
+    def __call__(self, queens, board):
+        try:
+            attacking_dict = {}
+            set_list = []
+            for i, queen in enumerate(queens):
+                attacked = board.get_queens_attacking(queen)
+                for a_queen in attacked:
+                    j = a_queen.id
+                    if i not in attacking_dict and j not in attacking_dict:
+                        attacking_dict[i] = set()
+                        attacking_dict[j] = attacking_dict[i]
+                        set_list.append(attacking_dict[i])
+                    elif i not in attacking_dict:
+                        attacking_dict[i] = attacking_dict[j]
+                    elif j not in attacking_dict:
+                        attacking_dict[j] = attacking_dict[i]
+                    else:
+                        attacking_dict[i].update(attacking_dict[j])
+                        attacking_dict[j] = attacking_dict[i]
+                    attacking_dict[i].add(queens[i])
+                    attacking_dict[i].add(queens[j])
+            h3 = 0
+            for s in set_list:
+                minc = min(queen.weight for queen in s)
+                h3 += minc**2
+            return h3
+        except ValueError:
+            return 0    
 
 def expand_node(node, heuristic):
     board = node.board
