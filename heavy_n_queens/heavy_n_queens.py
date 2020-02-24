@@ -194,7 +194,7 @@ class HeuristicOne:
 
     def __call__(self, queens, board):
         try:
-            return min(queen.weight for queen in queens if queen.is_attacking(board))
+            return min(queen.weight**2 for queen in queens if queen.is_attacking(board))
         except ValueError:
             return 0
 
@@ -216,7 +216,7 @@ class HeuristicTwo:
     
 class HeuristicThree:
     def __repr__(self):
-        return "HeuristicOne"
+        return "HeuristicThree"
 
     def __call__(self, queens, board):
         try:
@@ -550,6 +550,8 @@ def cli():
         heuristic = HeuristicOne()
     elif h.upper() == "H2":
         heuristic = HeuristicTwo()
+    elif h.upper() == "H3":
+        heuristic = HeuristicThree()
 
     run_algorithms([heuristic], [algorithm.lower()], board, queens, out_file=f"{algorithm}_{h}_results_{t}.txt", sideway_moves=9)
 
