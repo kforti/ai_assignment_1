@@ -1,0 +1,16 @@
+,Algorithm,Heuristic,True_result,Number of queens,Runtime,Cost,Heuristic_score,Depth,Effective_Branching,Nodes_Processed
+7,hill_climb,HeuristicTwo,True,4,0.014350652694702148,62,0,5,1.3076604860118306,5
+1,hill_climb,HeuristicTwo,True,4,0.010985851287841797,100,0,4,1.3195079107728942,4
+2,hill_climb,HeuristicTwo,True,4,0.02470684051513672,100,0,3,1.6265765616977856,7
+4,hill_climb,HeuristicTwo,True,4,0.008274078369140625,53,0,3,1.3160740129524924,3
+12,hill_climb,HeuristicTwo,True,5,0.020197391510009766,161,0,3,1.3160740129524924,3
+14,hill_climb,HeuristicTwo,True,5,0.02178359031677246,7,0,3,1.3160740129524924,3
+3,hill_climb,HeuristicTwo,True,4,0.005684852600097656,217,0,2,1.2599210498948732,2
+10,hill_climb,HeuristicTwo,True,5,0.013258934020996094,65,0,2,1.2599210498948732,2
+5,hill_climb,HeuristicTwo,True,4,0.0028297901153564453,64,0,1,1.0,1
+6,hill_climb,HeuristicTwo,True,4,0.0028634071350097656,18,0,1,1.0,1
+8,hill_climb,HeuristicTwo,True,4,0.0027658939361572266,36,0,1,1.0,1
+9,hill_climb,HeuristicTwo,True,4,0.003272533416748047,12,0,1,1.0,1
+11,hill_climb,HeuristicTwo,True,5,0.0067386627197265625,81,0,1,1.0,1
+13,hill_climb,HeuristicTwo,True,5,0.0068817138671875,81,0,1,1.0,1
+0,hill_climb,HeuristicTwo,True,4,2.1219253540039062e-05,0,0,0,0.0,0

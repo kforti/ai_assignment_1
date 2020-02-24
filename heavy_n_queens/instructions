@@ -1,0 +1,5 @@
+In the heavy_n_queens directory, run:
+
+    python heavy_n_queens.py [input_path] [algorithm (hill_climb or astar)] [heuristic (h1 or h2)]
+
+Replace the brackets with your value, brackets should not be in your command.
