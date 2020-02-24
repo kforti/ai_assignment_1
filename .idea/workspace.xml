@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="47df2fd6-bd7d-4ec8-8ed0-e1e5532734b2" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/heavy_n_queens/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/heavy_n_queens/heavy_n_queens.py" beforeDir="false" afterPath="$PROJECT_DIR$/heavy_n_queens.py" afterDir="false" />
-    </list>
+    <list default="true" id="47df2fd6-bd7d-4ec8-8ed0-e1e5532734b2" name="Default Changelist" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -79,6 +76,10 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <list>
+      <item itemvalue="Python.heavy_n_queens" />
+      <item itemvalue="Python.urban_planning" />
+    </list>
     <recent_temporary>
       <list>
         <item itemvalue="Python.heavy_n_queens" />
